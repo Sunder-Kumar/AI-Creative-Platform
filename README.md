@@ -104,4 +104,4 @@ Contributions are welcome! Please fork the repository and submit a pull request 
 
 This project is open-source and available under the [MIT License](LICENSE).
 
-You can try it[https://ai-creative-platform-nu.vercel.app/](Live!).
+You can try it [Live!](https://ai-creative-platform-nu.vercel.app/).
