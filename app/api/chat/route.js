@@ -37,12 +37,7 @@ export async function POST(req) {
       messages,
     });
 
-    // ✅ CORRECT RETURN (NO toResponse)
-    return new Response(result.textStream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-      },
-    });
+    return result.toResponse();
 
   } catch (error) {
     console.error('Chat API error:', error);
