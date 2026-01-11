@@ -36,8 +36,14 @@ export async function POST(req) {
       model: openai('gpt-4.1-mini'), // ✅ safer + supported
       messages,
     });
-
-    return result.toResponse();
+    return new Response(
+      result.textStream,
+      {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+        },
+      }
+    );
 
   } catch (error) {
     console.error('Chat API error:', error);
