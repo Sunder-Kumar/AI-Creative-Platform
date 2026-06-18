@@ -19,12 +19,13 @@ export function TrialProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const loadProfile = useCallback(async () => {
+    setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      setLoading(false);
       // Reset trial info if no session
       setTrialInfo({ used: 0, remaining: TRIAL_LIMIT, total: TRIAL_LIMIT, active: true });
       setSubscriptionStatus("free");
+      setLoading(false);
       return;
     }
 
@@ -37,7 +38,8 @@ export function TrialProvider({ children }) {
     if (profile) {
       const used = profile.trial_chats_used ?? 0;
       const remaining = Math.max(0, TRIAL_LIMIT - used);
-      const active = profile.subscription_status !== "active" && remaining > 0;
+      // Trial is active only when the user is not subscribed, trial flag is true, and remaining > 0
+      const active = profile.trial_active !== false && remaining > 0 && profile.subscription_status !== "active";
 
       setSubscriptionStatus(profile.subscription_status);
       setTrialInfo({
@@ -55,7 +57,18 @@ export function TrialProvider({ children }) {
   }, []); // Empty dependency array means this function is stable and won't change across renders
 
   useEffect(() => {
+    // Initial load
     loadProfile();
+
+    // Listen for auth changes (login/logout) and refresh profile accordingly
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, _session) => {
+      loadProfile();
+    });
+
+    return () => {
+      // Cleanup listener
+      authListener?.subscription?.unsubscribe?.();
+    };
   }, [loadProfile]); // Add loadProfile to dependency array to satisfy ESLint and ensure it runs when needed
 
   // Used by ChatPage after generating response - now unused, will be removed
