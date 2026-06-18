@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
-import openai from '@/lib/openai'
+import OpenAI from 'openai'
 import { getTrialContext, consumeTrialCredit } from '@/lib/trial'
 
 export async function POST(request) {
   try {
+    const openai = new OpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+    })
+
     if (!openai) {
       return NextResponse.json(
-        { error: 'Server configuration error: OpenAI not configured' },
+        { error: 'Server configuration error: OpenRouter not configured' },
         { status: 500 }
       )
     }
@@ -68,8 +73,10 @@ Please provide:
 
 Make it engaging, well-structured, and suitable for a murder mystery game or story.`
 
+    const maxTokens = Number(process.env.OPENROUTER_MAX_TOKENS) || 700;
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'openai/gpt-4-turbo',
       messages: [
         {
           role: 'system',
@@ -81,7 +88,7 @@ Make it engaging, well-structured, and suitable for a murder mystery game or sto
         }
       ],
       temperature: 0.9,
-      max_tokens: 3000,
+      max_tokens: maxTokens,
     })
 
     const mystery = completion.choices[0].message.content
@@ -94,6 +101,16 @@ Make it engaging, well-structured, and suitable for a murder mystery game or sto
     return NextResponse.json({ mystery, trial: trialPayload })
   } catch (error) {
     console.error('Murder mystery API error:', error)
+    if (error?.status === 402 || error?.code === 402 || String(error?.message).toLowerCase().includes('credit')) {
+      return NextResponse.json(
+        {
+          error: 'OUT_OF_CREDITS',
+          message: 'OpenRouter credits exhausted. Visit https://openrouter.ai/settings/credits to upgrade or reduce max tokens.',
+        },
+        { status: 402 }
+      )
+    }
+
     return NextResponse.json(
       { error: error.message || 'Failed to generate mystery' },
       { status: 500 }
